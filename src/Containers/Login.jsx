@@ -1,7 +1,9 @@
 import Button from "Components/Button/Button";
+import { UserContext } from "Components/Contexts/UserContext";
 import Form from "Components/Form";
 import { Nummber, Text } from "Components/Form/Field";
-import { useState } from "react";
+import { addUser, getUser } from "Service/methods";
+import { useContext, useEffect, useState } from "react";
 import styled from "styled-components";
 
 const Container = styled.div`
@@ -21,12 +23,38 @@ const Container = styled.div`
 `;
 
 function Login() {
+  const { resetUser } = useContext(UserContext);
   const [fieldStyle] = useState({
     width: "300px",
     borderRadius: "4px",
     height: "25px",
     paddingLeft: "8px",
   });
+  const onSubmit = async (formValues, { resetForm }) => {
+    let user;
+    const result = await getUser(formValues.phone);
+    if (result && result.length > 0) {
+      if (result[0].id) {
+        user = result[0];
+      }
+    } else {
+      const addedUser = await addUser({
+        name: formValues.name,
+        car: formValues.car,
+        phone: formValues.phone,
+        bill: 0,
+        slotId: 0,
+      });
+      if (addedUser?.id) {
+        const result = await getUser(formValues.phone);
+        if (result[0].id) {
+          user = result[0];
+        }
+      }
+    }
+    resetUser(user);
+    resetForm();
+  };
   return (
     <Container>
       <div className="form-wrapper">
@@ -36,10 +64,16 @@ function Login() {
           Login
         </span>
         <Form
-          initialValues={{ name: "", phone: "", otp: "" }}
-          onSubmit={(val) => {
-            console.log("formValues", val);
+          onReset={(val) => {
+            console.log("reset");
           }}
+          initialValues={{
+            name: "",
+            car: "",
+            phone: "",
+            otp: "",
+          }}
+          onSubmit={onSubmit}
         >
           <div className="field-container">
             <Text
@@ -49,18 +83,20 @@ function Login() {
               minLength={5}
               maxLength={25}
             />
-            <Nummber
+            <Text
               style={fieldStyle}
-              name="age"
-              title="Age"
-              allow="int"
-              minValue={18}
+              name="car"
+              title="Car"
+              minLength={5}
+              maxLength={25}
             />
-            <Nummber
+            <Text
               style={fieldStyle}
               name="phone"
               title="Phone"
-              allow="int"
+              allow="phone"
+              minLength={10}
+              maxLength={10}
               required
             />
             <Nummber

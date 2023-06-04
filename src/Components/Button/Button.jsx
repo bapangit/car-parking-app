@@ -1,14 +1,27 @@
-import styled from "styled-components";
+import styled, { css } from "styled-components";
 
-function Button({ text, onClick, ...rest }) {
+function Button({ text, onClick, disabled, ...rest }) {
   const Btn = styled.button`
     margin: 0px 6px;
     padding: 3px 5px;
-    background-color: white;
     border: 1px solid grey;
     border-radius: 4px;
+    ${({ disabled }) =>
+      disabled
+        ? css`
+            background-color: lightgray;
+          `
+        : css`
+            background-color: white;
+          `}
+
     :active {
-      background-color: lightblue;
+      ${({ disabled }) =>
+        disabled
+          ? css``
+          : css`
+              background-color: lightblue;
+            `}
     }
   `;
   return (
@@ -16,6 +29,8 @@ function Button({ text, onClick, ...rest }) {
       onClick={() => {
         onClick && onClick();
       }}
+      disabled={disabled}
+      {...rest}
     >
       {text}
     </Btn>
