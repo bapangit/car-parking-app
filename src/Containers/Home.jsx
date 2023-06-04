@@ -1,8 +1,18 @@
 import Button from "Components/Button/Button";
+import { UserContext } from "Components/Contexts/UserContext";
 import DropDownFilterLoader from "Components/Utils/DropDownFilterLoader";
-import { searchPlaces, searchSlots } from "Service/methods";
+import {
+  getUser,
+  searchPlaces,
+  searchSlots,
+  updateSlot,
+  updateUser,
+} from "Service/methods";
+import { setIsButtonDisable } from "Utils/helper";
+import { getFormattedTime } from "Utils/momentService";
+import { getCurrentTime } from "Utils/momentService";
 import moment from "moment";
-import { useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import Select from "react-select";
 import SplitPane from "react-split-pane";
 import styled from "styled-components";
@@ -14,6 +24,8 @@ const LeftNavBar = styled.div`
   height: 100%;
   width: 100%;
   display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 `;
 const RightNavBar = styled.div`
   height: 100%;
@@ -32,6 +44,7 @@ const RightNavBar = styled.div`
     &:hover {
       box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
     }
+    transition: 400ms all;
     display: flex;
     flex-direction: column;
     justify-content: space-evenly;
@@ -49,7 +62,10 @@ const fetchPlaces = async (changedText, setData, setLoading) => {
 
 function Home() {
   const [selectedPlace, setSelectedPlace] = useState(null);
-
+  const { user } = useContext(UserContext);
+  useEffect(() => {
+    console.log({ user });
+  }, [user]);
   const [
     searchTerm,
     setSearchTerm,
@@ -73,12 +89,58 @@ function Home() {
     try {
       const slots = await searchSlots(placeId);
       if (slots && slots.length > 0) {
+        console.log({ slots });
         setSlots(slots);
       }
     } catch {}
   };
 
-  const bookSlot = (index) => {};
+  const bookSlot = async (slotId, buttonId) => {
+    setIsButtonDisable(buttonId, true);
+    const userPhone = user.phone;
+    if (userPhone && slotId) {
+      const userData = await getUser(userPhone);
+      if (userData) {
+        const cuser = userData[0];
+        if (cuser && cuser.id && cuser.slotId === 0) {
+          // updateUser(userData.id);
+          const res = await updateSlot(slotId, {
+            status: 1,
+            booked_at: getCurrentTime(),
+            booked_by: cuser.id,
+          });
+          const resUser = await updateUser(cuser.id, { slotId: slotId });
+          if (res && res.status === 1) {
+            selectedPlace?.id && fetchSlots(selectedPlace.id);
+          }
+        }
+      }
+    }
+    setIsButtonDisable(buttonId, false);
+  };
+
+  const unBookSlot = async (slotId, buttonId) => {
+    setIsButtonDisable(buttonId, true);
+    const userPhone = user.phone;
+    if (userPhone && slotId) {
+      const userData = await getUser(userPhone);
+      if (userData) {
+        const cuser = userData[0];
+        if (cuser && cuser.id && cuser.slotId === slotId) {
+          const res = await updateSlot(slotId, {
+            status: 0,
+            booked_at: getCurrentTime(),
+            booked_by: 0,
+          });
+          const resUser = await updateUser(cuser.id, { slotId: 0 });
+          if (res && res.status === 0) {
+            selectedPlace?.id && fetchSlots(selectedPlace.id);
+          }
+        }
+      }
+    }
+    setIsButtonDisable(buttonId, false);
+  };
 
   return (
     <Container>
@@ -103,6 +165,17 @@ function Home() {
               inputValue={searchTerm}
             />
           </div>
+          <div style={{ margin: "25px 10px" }}>
+            <div
+              style={{
+                fontSize: "22px",
+                fontWeight: "500",
+                textTransform: "capitalize",
+              }}
+            >
+              {user.car}
+            </div>
+          </div>
         </LeftNavBar>
         <RightNavBar>
           {/* <div style={{ fontSize: "24px", fontWeight: "500" }}>Slots</div> */}
@@ -120,16 +193,36 @@ function Home() {
                     </div>
                     <div style={{ margin: "5px" }}>
                       <br />
-                      <div>Booked at :</div>
+                      <div>{val.status === 0 ? "Unbooked" : "Booked"} at :</div>
                       <span style={{ fontSize: "14px", fontWeight: "bold" }}>
-                        {moment.unix(val.booked_at).format("HH:MM")}
+                        {getFormattedTime(val.booked_at).format("HH:mm")}
                         <br />
-                        {moment.unix(val.booked_at).format("l")}
+                        {getFormattedTime(val.booked_at).format("DD-MM-YYYY")}
                       </span>
                     </div>
                     <Button
-                      text={val.status === 0 ? "Book" : "Booked"}
-                      disabled={val.status === 1}
+                      id="book-button"
+                      text={
+                        val.status === 0
+                          ? "Book"
+                          : val.booked_by === user.id
+                          ? "Unbook"
+                          : "Booked"
+                      }
+                      disabled={val.status === 1 && val.booked_by !== user.id}
+                      onClick={(e) => {
+                        if (val.status === 0) {
+                          bookSlot(val.id, e.target.id);
+                        } else {
+                          if (val.booked_by === user.id) {
+                            unBookSlot(val.id, e.target.id);
+                          }
+                        }
+                      }}
+                      style={{
+                        backgroundColor:
+                          val.booked_by === user.id ? "lightgreen" : "white",
+                      }}
                     />
                   </div>
                 );

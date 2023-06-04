@@ -1,6 +1,6 @@
 import moment from "moment";
 
-const format = "MMHHDDMMYYYY";
+const format = "mmHHDDMMYYYY";
 
 export const getCurrentTime = () => {
   return moment().format(format);

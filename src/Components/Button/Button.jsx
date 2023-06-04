@@ -26,8 +26,8 @@ function Button({ text, onClick, disabled, ...rest }) {
   `;
   return (
     <Btn
-      onClick={() => {
-        onClick && onClick();
+      onClick={(e) => {
+        onClick && onClick(e);
       }}
       disabled={disabled}
       {...rest}
