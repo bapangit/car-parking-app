@@ -173,7 +173,7 @@ function Home() {
                 textTransform: "capitalize",
               }}
             >
-              {user.car}
+              {user?.car || ""}
             </div>
           </div>
         </LeftNavBar>
